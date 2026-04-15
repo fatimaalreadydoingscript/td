@@ -3,6 +3,7 @@ import { EnemyInstance, EnemyState } from "../models/EnemyModel";
 import { EnemyDefinition } from "../config/EnemyConfig";
 import { GameConfig } from "../config/GameConfig";
 import { MathUtil } from "../utils/MathUtil";
+import { ModelLoader } from "../utils/ModelLoader";
 
 const DEBUG = GameConfig.DEBUG;
 let uidCounter = 0;
@@ -14,7 +15,7 @@ function generateUid(): string {
 
 export class EnemyService {
 	private enemies = new Map<string, EnemyInstance>();
-	private pool: BasePart[] = [];
+	private pool = new Map<string, BasePart[]>();
 	private enemyFolder: Folder;
 
 	constructor() {
@@ -23,14 +24,19 @@ export class EnemyService {
 		this.enemyFolder.Parent = Workspace;
 	}
 
-	spawn(def: EnemyDefinition, plotId: string, spawnPosition: Vector3, healthMultiplier: number): EnemyInstance | undefined {
+	spawn(
+		def: EnemyDefinition,
+		plotId: string,
+		spawnPosition: Vector3,
+		healthMultiplier: number,
+	): EnemyInstance | undefined {
 		if (this.enemies.size() >= GameConfig.MaxEnemies) {
 			if (DEBUG) warn("[EnemyService] Max enemy cap reached.");
 			return undefined;
 		}
 
-		const part = this.acquirePart(def);
-		part.CFrame = new CFrame(spawnPosition);
+		const part = this.acquirePart(def, spawnPosition);
+		if (!part) return undefined;
 
 		const scaledHealth = math.floor(def.health * healthMultiplier);
 
@@ -57,7 +63,6 @@ export class EnemyService {
 		};
 
 		this.enemies.set(instance.uid, instance);
-
 		if (DEBUG) print(`[EnemyService] Spawned '${def.id}' (uid=${instance.uid}) on plot '${plotId}'.`);
 		return instance;
 	}
@@ -68,8 +73,7 @@ export class EnemyService {
 
 		instance.state = "pooled";
 		this.enemies.delete(uid);
-		this.returnPart(instance.part);
-
+		this.returnToPool(instance.definitionId, instance.part);
 		if (DEBUG) print(`[EnemyService] Despawned enemy uid=${uid}.`);
 	}
 
@@ -79,8 +83,7 @@ export class EnemyService {
 
 		instance.state = "dead";
 		this.enemies.delete(uid);
-		this.returnPart(instance.part);
-
+		this.returnToPool(instance.definitionId, instance.part);
 		if (DEBUG) print(`[EnemyService] Killed enemy uid=${uid}.`);
 		return instance;
 	}
@@ -92,16 +95,19 @@ export class EnemyService {
 			if (enemy.state !== "alive") return;
 
 			if (enemy.isStunned && now < enemy.stunExpiry) return;
-			if (enemy.isStunned) {
-				enemy.isStunned = false;
-			}
+			if (enemy.isStunned) enemy.isStunned = false;
 
 			const target = getTargetPosition(enemy);
 			if (!target) return;
 
-			const effectiveSpeed = enemy.speed;
-			const newPos = MathUtil.moveToward(enemy.part.Position, target, effectiveSpeed, dt);
-			enemy.part.CFrame = new CFrame(newPos);
+			const newPos = MathUtil.moveToward(enemy.part.Position, target, enemy.speed, dt);
+
+			const model = enemy.part.Parent;
+			if (model && model.IsA("Model")) {
+				model.PivotTo(new CFrame(newPos));
+			} else {
+				enemy.part.CFrame = new CFrame(newPos);
+			}
 		});
 	}
 
@@ -152,29 +158,26 @@ export class EnemyService {
 		return this.enemies.size();
 	}
 
-	private acquirePart(def: EnemyDefinition): BasePart {
-		if (this.pool.size() > 0) {
-			const part = this.pool.pop()!;
-			part.Size = new Vector3(3, 3, 3);
-			part.Anchored = false;
-			part.CanCollide = false;
-			part.Transparency = 0;
+	private acquirePart(def: EnemyDefinition, position: Vector3): BasePart | undefined {
+		const poolBucket = this.pool.get(def.id);
+
+		if (poolBucket && poolBucket.size() > 0) {
+			const part = poolBucket.pop()!;
+			ModelLoader.respawnEnemy(part, position);
 			return part;
 		}
 
-		const part = new Instance("Part");
-		part.Name = def.id;
-		part.Size = new Vector3(3, 3, 3);
-		part.Anchored = true;
-		part.CanCollide = false;
-		part.CastShadow = false;
-		part.Parent = this.enemyFolder;
-		return part;
+		return ModelLoader.spawnEnemy(def.modelName, position, this.enemyFolder);
 	}
 
-	private returnPart(part: BasePart): void {
-		part.Anchored = true;
-		part.CFrame = new CFrame(new Vector3(0, -500, 0));
-		this.pool.push(part);
+	private returnToPool(defId: string, part: BasePart): void {
+		ModelLoader.poolEnemy(part);
+
+		let bucket = this.pool.get(defId);
+		if (!bucket) {
+			bucket = [];
+			this.pool.set(defId, bucket);
+		}
+		bucket.push(part);
 	}
 }

@@ -50,9 +50,10 @@ export class PlacementController {
 			return false;
 		}
 
-		this.economyService.spendMoney(player, def.cost);
-		this.towerService.place(def, plot.id, tostring(player.UserId), position);
+		const tower = this.towerService.place(def, plot.id, tostring(player.UserId), position);
+		if (!tower) return false;
 
+		this.economyService.spendMoney(player, def.cost);
 		if (DEBUG) print(`[PlacementController] ${player.Name} placed tower '${towerId}'.`);
 		return true;
 	}
@@ -80,9 +81,10 @@ export class PlacementController {
 			return false;
 		}
 
-		this.economyService.spendMoney(player, def.cost);
-		this.troopService.place(def, plot.id, tostring(player.UserId), snapPosition);
+		const troop = this.troopService.place(def, plot.id, tostring(player.UserId), snapPosition);
+		if (!troop) return false;
 
+		this.economyService.spendMoney(player, def.cost);
 		if (DEBUG) print(`[PlacementController] ${player.Name} placed troop '${troopId}'.`);
 		return true;
 	}

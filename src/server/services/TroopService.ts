@@ -2,6 +2,7 @@ import { Workspace } from "@rbxts/services";
 import { TroopInstance } from "../models/TroopModel";
 import { TroopDefinition, TroopConfigMap } from "../config/TroopConfig";
 import { GameConfig } from "../config/GameConfig";
+import { ModelLoader } from "../utils/ModelLoader";
 
 const DEBUG = GameConfig.DEBUG;
 let uidCounter = 0;
@@ -25,13 +26,11 @@ export class TroopService {
 		const upgrade = def.upgrades[0];
 		if (!upgrade) return undefined;
 
-		const part = new Instance("Part");
-		part.Name = def.id;
-		part.Size = new Vector3(3, 5, 3);
-		part.CFrame = new CFrame(snapPosition);
-		part.Anchored = true;
-		part.CanCollide = true;
-		part.Parent = this.troopFolder;
+		const part = ModelLoader.placeTroop(upgrade.modelName, snapPosition, this.troopFolder);
+		if (!part) {
+			if (DEBUG) warn(`[TroopService] Failed to load model '${upgrade.modelName}' for troop '${def.id}'.`);
+			return undefined;
+		}
 
 		const instance: TroopInstance = {
 			uid: generateUid(),
@@ -69,6 +68,13 @@ export class TroopService {
 		const nextUpgrade = def.upgrades.find((u) => u.level === nextLevel);
 		if (!nextUpgrade) return false;
 
+		const newPart = ModelLoader.swapTroopModel(troop.part, nextUpgrade.modelName, this.troopFolder);
+		if (!newPart) {
+			if (DEBUG) warn(`[TroopService] Failed to swap model for troop ${uid} level ${nextLevel}.`);
+			return false;
+		}
+
+		troop.part = newPart;
 		troop.upgradeLevel = nextLevel;
 		troop.maxHealth = nextUpgrade.health;
 		troop.health = nextUpgrade.health;
@@ -76,7 +82,7 @@ export class TroopService {
 		troop.range = nextUpgrade.range;
 		troop.cooldown = nextUpgrade.cooldown;
 
-		if (DEBUG) print(`[TroopService] Upgraded troop ${uid} to level ${nextLevel}.`);
+		if (DEBUG) print(`[TroopService] Upgraded troop ${uid} to level ${nextLevel}, model='${nextUpgrade.modelName}'.`);
 		return true;
 	}
 
@@ -84,7 +90,7 @@ export class TroopService {
 		const troop = this.troops.get(uid);
 		if (!troop) return;
 
-		troop.part.Destroy();
+		ModelLoader.despawnModel(troop.part);
 		this.troops.delete(uid);
 		if (DEBUG) print(`[TroopService] Removed troop uid=${uid}.`);
 	}

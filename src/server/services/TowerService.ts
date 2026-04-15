@@ -2,6 +2,7 @@ import { Workspace } from "@rbxts/services";
 import { TowerInstance } from "../models/TowerModel";
 import { TowerDefinition } from "../config/TowerConfig";
 import { GameConfig } from "../config/GameConfig";
+import { ModelLoader } from "../utils/ModelLoader";
 
 const DEBUG = GameConfig.DEBUG;
 let uidCounter = 0;
@@ -21,14 +22,12 @@ export class TowerService {
 		this.towerFolder.Parent = Workspace;
 	}
 
-	place(def: TowerDefinition, plotId: string, ownerId: string, position: Vector3): TowerInstance {
-		const part = new Instance("Part");
-		part.Name = def.id;
-		part.Size = new Vector3(4, 6, 4);
-		part.CFrame = new CFrame(position);
-		part.Anchored = true;
-		part.CanCollide = true;
-		part.Parent = this.towerFolder;
+	place(def: TowerDefinition, plotId: string, ownerId: string, position: Vector3): TowerInstance | undefined {
+		const part = ModelLoader.placeTower(def.modelName, position, this.towerFolder);
+		if (!part) {
+			if (DEBUG) warn(`[TowerService] Failed to load model '${def.modelName}' for tower '${def.id}'.`);
+			return undefined;
+		}
 
 		const instance: TowerInstance = {
 			uid: generateUid(),
@@ -53,7 +52,7 @@ export class TowerService {
 		const tower = this.towers.get(uid);
 		if (!tower) return;
 
-		tower.part.Destroy();
+		ModelLoader.despawnModel(tower.part);
 		this.towers.delete(uid);
 		if (DEBUG) print(`[TowerService] Removed tower uid=${uid}.`);
 	}
