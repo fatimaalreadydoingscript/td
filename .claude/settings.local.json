@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd:*)",
+      "Bash(./node_modules/.bin/rbxtsc)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(powershell.exe -NoProfile -Command \"Set-Location 'C:\\\\Users\\\\johni\\\\OneDrive\\\\Desktop\\\\td'; node node_modules/roblox-ts/out/CLI/index.js build --project 'C:\\\\Users\\\\johni\\\\OneDrive\\\\Desktop\\\\td\\\\tsconfig.json' 2>&1 | Out-String\")",
+      "Bash(powershell.exe -NoProfile -Command \"cd 'C:\\\\Users\\\\johni\\\\OneDrive\\\\Desktop\\\\td'; node node_modules/roblox-ts/out/CLI/index.js build --project 'C:\\\\Users\\\\johni\\\\OneDrive\\\\Desktop\\\\td\\\\tsconfig.json'\")",
+      "Bash(npm install *)",
+      "Bash(powershell.exe -NoProfile -Command \"cd 'C:\\\\Users\\\\johni\\\\OneDrive\\\\Desktop\\\\td'; node node_modules/typescript/bin/tsc --noEmit 2>&1 | Select-String -NotMatch 'node_modules'\")",
+      "Bash(powershell.exe -NoProfile -Command \"cd 'C:\\\\Users\\\\johni\\\\OneDrive\\\\Desktop\\\\td'; node node_modules/roblox-ts/out/CLI/index.js build --project 'C:\\\\Users\\\\johni\\\\OneDrive\\\\Desktop\\\\td\\\\tsconfig.json' 2>&1\")",
+      "Bash(powershell.exe -NoProfile -Command ' *)"
+    ]
+  }
+}
