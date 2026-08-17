@@ -26,6 +26,258 @@
 			},
 			"TS": {
 				"$path": "out/shared"
+			},
+			"Assets": {
+				"$className": "Folder",
+				"Enemies": {
+					"$className": "Folder",
+					"GoblinModel": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [1.7, 2.55, 1.7],
+								"Color": [0.392, 0.784, 0.314],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"OrcModel": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [2.6, 3.9, 2.6],
+								"Color": [0.314, 0.51, 0.235],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"SkeletonModel": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [1.8, 2.7, 1.8],
+								"Color": [0.863, 0.863, 0.824],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"TrollModel": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [3.6, 5.4, 3.6],
+								"Color": [0.235, 0.392, 0.235],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"LichModel": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [5, 7.5, 5],
+								"Color": [0.549, 0.235, 0.784],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"DragonModel": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [6.4, 9.6, 6.4],
+								"Color": [0.784, 0.196, 0.157],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					}
+				},
+				"Towers": {
+					"$className": "Folder",
+					"ArcherTower": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [4, 8, 4],
+								"Color": [0.314, 0.549, 1],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"FireTower": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [4, 8, 4],
+								"Color": [1, 0.392, 0.157],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"IceTower": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [4, 8, 4],
+								"Color": [0.471, 0.863, 1],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"PoisonTower": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [4, 8, 4],
+								"Color": [0.627, 1, 0.314],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"CannonTower": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [4, 8, 4],
+								"Color": [0.784, 0.784, 0.784],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					}
+				},
+				"Troops": {
+					"$className": "Folder",
+					"SwordsmanLv1": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [2, 3.6, 2],
+								"Color": [0.824, 0.706, 0.471],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"SwordsmanLv2": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [2, 4.2, 2],
+								"Color": [0.824, 0.706, 0.471],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"SwordsmanLv3": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [2, 4.8, 2],
+								"Color": [0.824, 0.706, 0.471],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"ArcherLv1": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [2, 3.6, 2],
+								"Color": [0.471, 0.784, 0.549],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"ArcherLv2": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [2, 4.2, 2],
+								"Color": [0.471, 0.784, 0.549],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"ArcherLv3": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [2, 4.8, 2],
+								"Color": [0.471, 0.784, 0.549],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"MageLv1": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [2, 3.6, 2],
+								"Color": [0.667, 0.471, 0.902],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"MageLv2": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [2, 4.2, 2],
+								"Color": [0.667, 0.471, 0.902],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					},
+					"MageLv3": {
+						"$className": "Model",
+						"Root": {
+							"$className": "Part",
+							"$properties": {
+								"Size": [2, 4.8, 2],
+								"Color": [0.667, 0.471, 0.902],
+								"Anchored": true,
+								"CanCollide": false
+							}
+						}
+					}
+				}
 			}
 		},
 		"StarterPlayer": {
@@ -41,6 +293,62 @@
 			"$className": "Workspace",
 			"$properties": {
 				"FilteringEnabled": true
+			},
+			"Plots": {
+				"$className": "Folder",
+				"Plot1": {
+					"$className": "Model",
+					"PlacementArea": {
+						"$className": "Part",
+						"$properties": {
+							"Size": [120, 1, 120],
+							"Position": [0, 0, 0],
+							"Color": [0.275, 0.314, 0.275],
+							"Anchored": true,
+							"CanCollide": true
+						}
+					},
+					"Core": {
+						"$className": "Part",
+						"$properties": {
+							"Size": [10, 10, 10],
+							"Position": [0, 5.5, 0],
+							"Color": [1, 0.824, 0.353],
+							"Anchored": true,
+							"CanCollide": false
+						}
+					},
+					"Spawner": {
+						"$className": "Part",
+						"$properties": {
+							"Size": [4, 4, 4],
+							"Position": [0, 20, -70],
+							"Color": [1, 0.314, 0.314],
+							"Anchored": true,
+							"CanCollide": false
+						}
+					},
+					"SpawnerLeft": {
+						"$className": "Part",
+						"$properties": {
+							"Size": [4, 4, 4],
+							"Position": [-70, 20, 0],
+							"Color": [1, 0.314, 0.314],
+							"Anchored": true,
+							"CanCollide": false
+						}
+					},
+					"SpawnerRight": {
+						"$className": "Part",
+						"$properties": {
+							"Size": [4, 4, 4],
+							"Position": [70, 20, 0],
+							"Color": [1, 0.314, 0.314],
+							"Anchored": true,
+							"CanCollide": false
+						}
+					}
+				}
 			}
 		},
 		"HttpService": {
