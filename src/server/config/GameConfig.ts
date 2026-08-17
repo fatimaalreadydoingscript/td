@@ -1,7 +1,6 @@
 export const GameConfig = {
 	DEBUG: true,
 
-	MaxEnemies: 150,
 	SpawnRate: 1.5,
 	HealthScaling: 0.08,
 	SiegeScaling: 0.03,
@@ -14,11 +13,15 @@ export const GameConfig = {
 	BossUnlockMinutes: 30,
 	SiegeUnlockMinutes: 30,
 
-	SpawnRadius: 8,
-	SpawnHeightOffset: 12,
+	SpawnRingRadius: 70,
+	SpawnMinHeight: 8,
+	SpawnMaxHeight: 20,
 
 	BaseSpawnMin: 2,
 	BaseSpawnMax: 5,
+
+	FishSpinSpeed: 0.9,
+	FishDescentSpeed: 1.4,
 
 	BaseMoneyPerKill: 10,
 	BaseExpPerKill: 5,

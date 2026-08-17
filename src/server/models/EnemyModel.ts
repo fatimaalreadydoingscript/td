@@ -22,4 +22,6 @@ export interface EnemyInstance {
 	isStunned: boolean;
 	stunExpiry: number;
 	targetId: string | undefined;
+	spawnTime: number;
+	hoverY: number;
 }

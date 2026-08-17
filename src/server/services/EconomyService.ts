@@ -16,7 +16,7 @@ export class EconomyService {
 	initialize(): void {
 		Players.PlayerAdded.Connect((player) => {
 			this.ledger.set(player.UserId, {
-				money: 0,
+				money: GameConfig.DEBUG ? 999999 : 0,
 				exp: 0,
 				totalMoneyEarned: 0,
 				totalExpEarned: 0,
@@ -30,7 +30,7 @@ export class EconomyService {
 
 		for (const player of Players.GetPlayers()) {
 			this.ledger.set(player.UserId, {
-				money: 0,
+				money: GameConfig.DEBUG ? 999999 : 0,
 				exp: 0,
 				totalMoneyEarned: 0,
 				totalExpEarned: 0,

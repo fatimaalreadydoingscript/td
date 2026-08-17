@@ -1,3 +1,4 @@
+import { Workspace } from "@rbxts/services";
 import { EnemyService } from "./EnemyService";
 import { TowerService } from "./TowerService";
 import { TroopService } from "./TroopService";
@@ -8,7 +9,6 @@ import { MathUtil } from "../utils/MathUtil";
 import { GameConfig } from "../config/GameConfig";
 
 const DEBUG = GameConfig.DEBUG;
-const ENEMY_STUN_DURATION = 0.6;
 
 export class CombatService {
 	private enemyService: EnemyService;
@@ -37,8 +37,27 @@ export class CombatService {
 	update(dt: number): void {
 		this.processTowerAttacks();
 		this.processTroopAttacks();
-		this.processEnemyAttacks();
+		this.processCoreCollisions();
 		this.effectService.update(dt, (uid, dmg) => this.applyDamageToEnemy(uid, dmg));
+	}
+
+	private processCoreCollisions(): void {
+		const overlapParams = new OverlapParams();
+		overlapParams.FilterType = Enum.RaycastFilterType.Include;
+
+		for (const plot of this.plotService.getAllPlots()) {
+			const core = plot.core;
+			overlapParams.FilterDescendantsInstances = [this.enemyService.getFolder()];
+
+			const touching = Workspace.GetPartsInPart(core, overlapParams);
+			for (const part of touching) {
+				const uid = this.enemyService.getUidByPart(part as BasePart);
+				if (!uid) continue;
+
+				if (DEBUG) print(`[CombatService] Enemy ${uid} touched core on plot '${plot.id}'. Despawning.`);
+				this.enemyService.despawn(uid);
+			}
+		}
 	}
 
 	private processTowerAttacks(): void {
@@ -76,39 +95,6 @@ export class CombatService {
 		});
 	}
 
-	private processEnemyAttacks(): void {
-		const now = os.clock();
-
-		this.enemyService.getAllEnemies().forEach((enemy, enemyUid) => {
-			if (enemy.state !== "alive") return;
-			if (now - enemy.lastAttackTime < enemy.attackCooldown) return;
-
-			const troopsOnPlot = this.troopService.getTroopsOnPlot(enemy.plotId);
-			let closestTroop: string | undefined;
-			let closestDist = enemy.baseSpeed * 2;
-
-			for (const troop of troopsOnPlot) {
-				if (!troop.isActive) continue;
-				const dist = MathUtil.distance(enemy.part.Position, troop.part.Position);
-				if (dist < closestDist) {
-					closestDist = dist;
-					closestTroop = troop.uid;
-				}
-			}
-
-			if (closestTroop) {
-				enemy.lastAttackTime = now;
-				const dead = this.troopService.applyDamage(closestTroop, enemy.damage);
-				this.troopService.applyStun(closestTroop, ENEMY_STUN_DURATION);
-
-				if (dead) {
-					this.troopService.remove(closestTroop);
-					if (DEBUG) print(`[CombatService] Troop ${closestTroop} died from enemy ${enemyUid}.`);
-				}
-			}
-		});
-	}
-
 	private applyDamageToEnemy(uid: string, amount: number): void {
 		const dead = this.enemyService.applyDamage(uid, amount);
 		if (!dead) return;
@@ -117,7 +103,7 @@ export class CombatService {
 		if (!killed) return;
 
 		const plot = this.plotService.getPlotById(killed.plotId);
-		if (!plot) return;
+		if (!plot || !plot.owner) return;
 
 		this.economyService.rewardKill(plot.owner, killed.moneyReward, killed.expReward);
 		if (DEBUG) print(`[CombatService] Enemy ${uid} killed. Rewarded ${killed.moneyReward}g ${killed.expReward}xp.`);
@@ -142,21 +128,6 @@ export class CombatService {
 	getTargetPositionForEnemy(enemy: { plotId: string; part: BasePart }): Vector3 | undefined {
 		const plot = this.plotService.getPlotById(enemy.plotId);
 		if (!plot) return undefined;
-
-		const troops = this.troopService.getTroopsOnPlot(enemy.plotId);
-		let closestPos: Vector3 | undefined;
-		let closestDist = math.huge;
-
-		for (const troop of troops) {
-			if (!troop.isActive) continue;
-			const dist = MathUtil.distance(enemy.part.Position, troop.part.Position);
-			if (dist < closestDist) {
-				closestDist = dist;
-				closestPos = troop.part.Position;
-			}
-		}
-
-		if (closestPos && closestDist < 40) return closestPos;
 		return plot.core.Position;
 	}
 }

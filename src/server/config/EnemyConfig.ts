@@ -10,6 +10,8 @@ export interface EnemyDefinition {
 	readonly weight: number;
 	readonly isBoss: boolean;
 	readonly modelName: string;
+	readonly color: [number, number, number];
+	readonly scale: number;
 }
 
 export const EnemyConfig: ReadonlyArray<EnemyDefinition> = [
@@ -25,6 +27,8 @@ export const EnemyConfig: ReadonlyArray<EnemyDefinition> = [
 		weight: 50,
 		isBoss: false,
 		modelName: "GoblinModel",
+		color: [100, 200, 80],
+		scale: 0.85,
 	},
 	{
 		id: "orc",
@@ -38,6 +42,8 @@ export const EnemyConfig: ReadonlyArray<EnemyDefinition> = [
 		weight: 30,
 		isBoss: false,
 		modelName: "OrcModel",
+		color: [80, 130, 60],
+		scale: 1.3,
 	},
 	{
 		id: "skeleton",
@@ -51,6 +57,8 @@ export const EnemyConfig: ReadonlyArray<EnemyDefinition> = [
 		weight: 40,
 		isBoss: false,
 		modelName: "SkeletonModel",
+		color: [220, 220, 210],
+		scale: 0.9,
 	},
 	{
 		id: "troll",
@@ -64,6 +72,8 @@ export const EnemyConfig: ReadonlyArray<EnemyDefinition> = [
 		weight: 10,
 		isBoss: false,
 		modelName: "TrollModel",
+		color: [60, 100, 60],
+		scale: 1.8,
 	},
 	{
 		id: "boss_lich",
@@ -77,6 +87,8 @@ export const EnemyConfig: ReadonlyArray<EnemyDefinition> = [
 		weight: 1,
 		isBoss: true,
 		modelName: "LichModel",
+		color: [140, 60, 200],
+		scale: 2.5,
 	},
 	{
 		id: "boss_dragon",
@@ -90,6 +102,8 @@ export const EnemyConfig: ReadonlyArray<EnemyDefinition> = [
 		weight: 1,
 		isBoss: true,
 		modelName: "DragonModel",
+		color: [200, 50, 40],
+		scale: 3.2,
 	},
 ];
 

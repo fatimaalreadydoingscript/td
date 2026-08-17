@@ -16,10 +16,10 @@ export class SpawnService {
 	private levelService: LevelService;
 
 	constructor(plotService: PlotService, enemyService: EnemyService, levelService: LevelService) {
-		this.plotService = plotService;
+		this.plotService  = plotService;
 		this.enemyService = enemyService;
 		this.levelService = levelService;
-		this.spawnTimer = new Timer(GameConfig.SpawnRate);
+		this.spawnTimer   = new Timer(GameConfig.SpawnRate);
 	}
 
 	start(): void {
@@ -27,24 +27,29 @@ export class SpawnService {
 	}
 
 	update(dt: number): void {
-		const state = this.levelService.getState();
-		const effectiveRate = GameConfig.SpawnRate / state.spawnRateMultiplier;
-
-		if (this.spawnTimer.getProgress() === 0 || effectiveRate !== GameConfig.SpawnRate) {
-			// Dynamic rate update handled via interval logic below
-		}
-
 		if (!this.spawnTimer.tick(dt)) return;
 
-		const plots = this.plotService.getAllPlots();
-		for (const plot of plots) {
+		const state = this.levelService.getState();
+
+		for (const plot of this.plotService.getAllPlots()) {
 			const count = MathUtil.randomInt(GameConfig.BaseSpawnMin, GameConfig.BaseSpawnMax);
+
+			// ── Ring spawner (always active) ──────────────────────────────────
 			for (let i = 0; i < count; i++) {
 				const def = this.pickEnemy(state.bossUnlocked);
 				if (!def) continue;
+				const pos = this.ringSpawnPosition(plot.core.Position);
+				this.enemyService.spawn(def, plot.id, pos, state.healthMultiplier);
+			}
 
-				const spawnPos = this.calculateSpawnPosition(plot.spawner.Position);
-				this.enemyService.spawn(def, plot.id, spawnPos, state.healthMultiplier);
+			// ── Lane spawners (left + right, if placed in Studio) ─────────────
+			for (const laneSpawner of plot.laneSpawners) {
+				for (let i = 0; i < count; i++) {
+					const def = this.pickEnemy(state.bossUnlocked);
+					if (!def) continue;
+					const pos = this.laneSpawnPosition(laneSpawner.Position);
+					this.enemyService.spawn(def, plot.id, pos, state.healthMultiplier);
+				}
 			}
 		}
 	}
@@ -59,9 +64,9 @@ export class SpawnService {
 		const def = WeightedRandom.pick(bossDefs);
 		if (!def) return;
 
-		const spawnPos = this.calculateSpawnPosition(plot.spawner.Position);
 		const state = this.levelService.getState();
-		const enemy = this.enemyService.spawn(def, plotId, spawnPos, state.healthMultiplier);
+		const pos   = this.ringSpawnPosition(plot.core.Position);
+		const enemy = this.enemyService.spawn(def, plotId, pos, state.healthMultiplier);
 
 		if (enemy && DEBUG) print(`[SpawnService] Boss '${def.id}' spawned on plot '${plotId}'.`);
 	}
@@ -79,8 +84,22 @@ export class SpawnService {
 		});
 	}
 
-	private calculateSpawnPosition(spawnerPosition: Vector3): Vector3 {
-		const offset = MathUtil.randomInCircle(GameConfig.SpawnRadius);
-		return spawnerPosition.add(offset).add(new Vector3(0, GameConfig.SpawnHeightOffset, 0));
+	// Spawns on a random point along a 70-stud ring around the core
+	private ringSpawnPosition(corePos: Vector3): Vector3 {
+		const angle = math.random() * math.pi * 2;
+		return new Vector3(
+			corePos.X + math.cos(angle) * GameConfig.SpawnRingRadius,
+			corePos.Y + MathUtil.randomFloat(GameConfig.SpawnMinHeight, GameConfig.SpawnMaxHeight),
+			corePos.Z + math.sin(angle) * GameConfig.SpawnRingRadius,
+		);
+	}
+
+	// Spawns directly at the lane spawner's position with a random height offset
+	private laneSpawnPosition(spawnerPos: Vector3): Vector3 {
+		return new Vector3(
+			spawnerPos.X,
+			spawnerPos.Y + MathUtil.randomFloat(GameConfig.SpawnMinHeight, GameConfig.SpawnMaxHeight),
+			spawnerPos.Z,
+		);
 	}
 }

@@ -16,6 +16,7 @@ function generateUid(): string {
 export class EnemyService {
 	private enemies = new Map<string, EnemyInstance>();
 	private pool = new Map<string, BasePart[]>();
+	private partToUid = new Map<BasePart, string>();
 	private enemyFolder: Folder;
 
 	constructor() {
@@ -30,11 +31,6 @@ export class EnemyService {
 		spawnPosition: Vector3,
 		healthMultiplier: number,
 	): EnemyInstance | undefined {
-		if (this.enemies.size() >= GameConfig.MaxEnemies) {
-			if (DEBUG) warn("[EnemyService] Max enemy cap reached.");
-			return undefined;
-		}
-
 		const part = this.acquirePart(def, spawnPosition);
 		if (!part) return undefined;
 
@@ -60,9 +56,12 @@ export class EnemyService {
 			isStunned: false,
 			stunExpiry: 0,
 			targetId: undefined,
+			spawnTime: os.clock(),
+			hoverY: spawnPosition.Y,
 		};
 
 		this.enemies.set(instance.uid, instance);
+		this.partToUid.set(part, instance.uid);
 		if (DEBUG) print(`[EnemyService] Spawned '${def.id}' (uid=${instance.uid}) on plot '${plotId}'.`);
 		return instance;
 	}
@@ -73,6 +72,7 @@ export class EnemyService {
 
 		instance.state = "pooled";
 		this.enemies.delete(uid);
+		this.partToUid.delete(instance.part);
 		this.returnToPool(instance.definitionId, instance.part);
 		if (DEBUG) print(`[EnemyService] Despawned enemy uid=${uid}.`);
 	}
@@ -83,30 +83,53 @@ export class EnemyService {
 
 		instance.state = "dead";
 		this.enemies.delete(uid);
+		this.partToUid.delete(instance.part);
 		this.returnToPool(instance.definitionId, instance.part);
 		if (DEBUG) print(`[EnemyService] Killed enemy uid=${uid}.`);
 		return instance;
 	}
 
+	getUidByPart(part: BasePart): string | undefined {
+		return this.partToUid.get(part);
+	}
+
 	update(dt: number, getTargetPosition: (enemy: EnemyInstance) => Vector3 | undefined): void {
-		const now = os.clock();
+		const now          = os.clock();
+		const descentSpeed = 1.5;
 
 		this.enemies.forEach((enemy) => {
 			if (enemy.state !== "alive") return;
-
-			if (enemy.isStunned && now < enemy.stunExpiry) return;
-			if (enemy.isStunned) enemy.isStunned = false;
+			if (enemy.isStunned) {
+				if (now < enemy.stunExpiry) return;
+				enemy.isStunned = false;
+			}
 
 			const target = getTargetPosition(enemy);
 			if (!target) return;
 
-			const newPos = MathUtil.moveToward(enemy.part.Position, target, enemy.speed, dt);
+			const cur = enemy.part.Position;
+
+			const newX = MathUtil.moveToward(
+				new Vector3(cur.X, 0, cur.Z),
+				new Vector3(target.X, 0, target.Z),
+				enemy.speed,
+				dt,
+			);
+			const newY = cur.Y > target.Y
+				? math.max(target.Y, cur.Y - descentSpeed * dt)
+				: cur.Y;
+
+			const finalPos = new Vector3(newX.X, newY, newX.Z);
+			const toCore   = new Vector3(target.X - finalPos.X, 0, target.Z - finalPos.Z);
 
 			const model = enemy.part.Parent;
 			if (model && model.IsA("Model")) {
-				model.PivotTo(new CFrame(newPos));
+				const cf = toCore.Magnitude > 0.01
+					? CFrame.lookAt(finalPos, finalPos.add(toCore))
+					: new CFrame(finalPos);
+				model.PivotTo(cf);
 			} else {
-				enemy.part.CFrame = new CFrame(newPos);
+				enemy.part.CFrame = new CFrame(finalPos);
 			}
 		});
 	}
@@ -136,6 +159,10 @@ export class EnemyService {
 		const enemy = this.enemies.get(uid);
 		if (!enemy) return;
 		enemy.speed = enemy.baseSpeed;
+	}
+
+	getFolder(): Folder {
+		return this.enemyFolder;
 	}
 
 	getEnemy(uid: string): EnemyInstance | undefined {

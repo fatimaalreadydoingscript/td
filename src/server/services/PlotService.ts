@@ -3,14 +3,20 @@ import { GameConfig } from "../config/GameConfig";
 
 export interface PlotData {
 	readonly id: string;
-	readonly owner: Player;
+	readonly owner: Player | undefined;
 	readonly plotInstance: Model;
 	readonly spawner: BasePart;
+	readonly laneSpawners: BasePart[];
 	readonly placementArea: BasePart;
 	readonly core: BasePart;
 }
 
 const DEBUG = GameConfig.DEBUG;
+
+function hideMarker(part: BasePart): void {
+	part.Transparency = 1;
+	part.CanCollide = false;
+}
 
 export class PlotService {
 	private plots = new Map<string, PlotData>();
@@ -23,62 +29,75 @@ export class PlotService {
 			return;
 		}
 
-		Players.PlayerAdded.Connect((player) => this.assignPlot(player));
-		Players.PlayerRemoving.Connect((player) => this.releasePlot(player));
-
-		for (const existingPlayer of Players.GetPlayers()) {
-			this.assignPlot(existingPlayer);
+		// Register all plots immediately — no player required
+		for (const child of plotsFolder.GetChildren()) {
+			this.registerPlot(child as Model);
 		}
 
-		if (DEBUG) print("[PlotService] Initialized.");
+		// Assign ownership when players join (optional, for future use)
+		Players.PlayerAdded.Connect((player) => this.assignOwner(player));
+		Players.PlayerRemoving.Connect((player) => this.releaseOwner(player));
+		for (const player of Players.GetPlayers()) {
+			this.assignOwner(player);
+		}
+
+		if (DEBUG) print(`[PlotService] Initialized — ${this.plots.size()} plot(s) registered.`);
 	}
 
-	private assignPlot(player: Player): void {
-		const plotsFolder = Workspace.FindFirstChild("Plots") as Folder | undefined;
-		if (!plotsFolder) return;
+	private registerPlot(plotModel: Model): void {
+		const plotId = plotModel.Name;
 
-		for (const child of plotsFolder.GetChildren()) {
-			const plotModel = child as Model;
-			const plotId = plotModel.Name;
+		const spawner       = plotModel.FindFirstChild("Spawner")       as BasePart | undefined;
+		const placementArea = plotModel.FindFirstChild("PlacementArea") as BasePart | undefined;
+		const core          = plotModel.FindFirstChild("Core")          as BasePart | undefined;
 
-			if (this.plots.has(plotId)) continue;
-
-			const spawner = plotModel.FindFirstChild("Spawner") as BasePart | undefined;
-			const placementArea = plotModel.FindFirstChild("PlacementArea") as BasePart | undefined;
-			const core = plotModel.FindFirstChild("Core") as BasePart | undefined;
-
-			if (!spawner || !placementArea || !core) {
-				if (DEBUG) warn(`[PlotService] Plot '${plotId}' is missing required parts.`);
-				continue;
-			}
-
-			const plotData: PlotData = {
-				id: plotId,
-				owner: player,
-				plotInstance: plotModel,
-				spawner,
-				placementArea,
-				core,
-			};
-
-			this.plots.set(plotId, plotData);
-			this.playerPlots.set(player.UserId, plotId);
-
-			if (DEBUG) print(`[PlotService] Assigned plot '${plotId}' to ${player.Name}.`);
+		if (!spawner || !placementArea || !core) {
+			if (DEBUG) warn(`[PlotService] Plot '${plotId}' is missing Spawner, PlacementArea, or Core.`);
 			return;
 		}
 
-		if (DEBUG) warn(`[PlotService] No available plot for ${player.Name}.`);
+		hideMarker(spawner);
+
+		const laneSpawners: BasePart[] = [];
+		const left  = plotModel.FindFirstChild("SpawnerLeft")  as BasePart | undefined;
+		const right = plotModel.FindFirstChild("SpawnerRight") as BasePart | undefined;
+		if (left)  { hideMarker(left);  laneSpawners.push(left); }
+		if (right) { hideMarker(right); laneSpawners.push(right); }
+
+		this.plots.set(plotId, {
+			id: plotId,
+			owner: undefined,
+			plotInstance: plotModel,
+			spawner,
+			laneSpawners,
+			placementArea,
+			core,
+		});
+
+		if (DEBUG) print(`[PlotService] Registered plot '${plotId}'.`);
 	}
 
-	private releasePlot(player: Player): void {
+	private assignOwner(player: Player): void {
+		for (const [plotId, plot] of this.plots) {
+			if (plot.owner !== undefined) continue;
+
+			this.plots.set(plotId, { ...plot, owner: player });
+			this.playerPlots.set(player.UserId, plotId);
+
+			if (DEBUG) print(`[PlotService] Player '${player.Name}' owns plot '${plotId}'.`);
+			return;
+		}
+	}
+
+	private releaseOwner(player: Player): void {
 		const plotId = this.playerPlots.get(player.UserId);
 		if (!plotId) return;
 
-		this.plots.delete(plotId);
+		const plot = this.plots.get(plotId);
+		if (plot) this.plots.set(plotId, { ...plot, owner: undefined });
 		this.playerPlots.delete(player.UserId);
 
-		if (DEBUG) print(`[PlotService] Released plot '${plotId}' from ${player.Name}.`);
+		if (DEBUG) print(`[PlotService] Released ownership of plot '${plotId}'.`);
 	}
 
 	getPlotByPlayer(player: Player): PlotData | undefined {
@@ -101,14 +120,10 @@ export class PlotService {
 		const plot = this.plots.get(plotId);
 		if (!plot) return false;
 
-		const area = plot.placementArea;
-		const size = area.Size;
-		const cf = area.CFrame;
-		const localPos = cf.PointToObjectSpace(position);
-
+		const localPos = plot.placementArea.CFrame.PointToObjectSpace(position);
 		return (
-			math.abs(localPos.X) <= size.X / 2 &&
-			math.abs(localPos.Z) <= size.Z / 2
+			math.abs(localPos.X) <= plot.placementArea.Size.X / 2 &&
+			math.abs(localPos.Z) <= plot.placementArea.Size.Z / 2
 		);
 	}
 }
