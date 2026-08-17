@@ -1,18 +1,14 @@
 import { LevelService } from "./LevelService";
 import { GameConfig } from "../config/GameConfig";
-import { Timer } from "../utils/Timer";
 
 const DEBUG = GameConfig.DEBUG;
 
 export class SiegeService {
 	private levelService: LevelService;
-	private activeSiege = false;
-	private siegeEndTime = 0;
-	private siegeTimer: Timer;
+	private wasActive = false;
 
 	constructor(levelService: LevelService) {
 		this.levelService = levelService;
-		this.siegeTimer = new Timer(GameConfig.SiegeDuration);
 	}
 
 	initialize(): void {
@@ -20,34 +16,32 @@ export class SiegeService {
 	}
 
 	update(_dt: number): void {
-		if (!this.activeSiege) return;
+		const active = this.isActive();
 
-		if (os.clock() >= this.siegeEndTime) {
-			this.activeSiege = false;
-			const count = this.levelService.getSiegeCount();
-			if (DEBUG) print(`[SiegeService] Siege #${count} ended.`);
+		if (this.wasActive && !active) {
+			if (DEBUG) print(`[SiegeService] Siege #${this.levelService.getSiegeCount()} ended.`);
 		}
+
+		this.wasActive = active;
 	}
 
 	private triggerSiege(): void {
-		this.activeSiege = true;
-		this.siegeEndTime = os.clock() + GameConfig.SiegeDuration;
+		this.wasActive = true;
 		const count = this.levelService.getSiegeCount();
 		if (DEBUG) print(`[SiegeService] Siege #${count} started. Duration: ${GameConfig.SiegeDuration}s.`);
 	}
 
+	// LevelService owns the siege window — these read from it rather than
+	// tracking a second copy on a different clock.
 	isActive(): boolean {
-		return this.activeSiege;
+		return this.levelService.getState().siegeActive;
 	}
 
 	getSpawnMultiplier(): number {
-		if (!this.activeSiege) return 1;
-		const count = this.levelService.getSiegeCount();
-		return 1 + GameConfig.SiegeFirstBonus + (count - 1) * GameConfig.SiegeScaling;
+		return this.levelService.getState().spawnRateMultiplier;
 	}
 
 	getRemainingTime(): number {
-		if (!this.activeSiege) return 0;
-		return math.max(0, this.siegeEndTime - os.clock());
+		return this.levelService.getSiegeRemaining();
 	}
 }

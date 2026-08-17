@@ -8,6 +8,7 @@ export interface LevelState {
 	spawnRateMultiplier: number;
 	bossUnlocked: boolean;
 	siegeUnlocked: boolean;
+	siegeActive: boolean;
 	siegeCount: number;
 	bossCount: number;
 }
@@ -21,6 +22,7 @@ export class LevelService {
 	private lastSiegeTime = 0;
 	private lastBossTime = 0;
 	private lastBubbleTime = 0;
+	private unlockPrimed = false;
 
 	private onSiegeTrigger: (() => void) | undefined;
 	private onBossTrigger: (() => void) | undefined;
@@ -53,6 +55,15 @@ export class LevelService {
 		const unlockMinutes = GameConfig.BossUnlockMinutes;
 
 		if (minutes >= unlockMinutes) {
+			// Measure the first interval from the unlock moment. Left at 0, both
+			// counters would already exceed their interval and fire on the very
+			// first tick past the unlock.
+			if (!this.unlockPrimed) {
+				this.unlockPrimed = true;
+				this.lastBossTime = elapsed;
+				this.lastSiegeTime = elapsed;
+			}
+
 			if (elapsed - this.lastBossTime >= GameConfig.BossInterval) {
 				this.lastBossTime = elapsed;
 				this.bossCount++;
@@ -82,8 +93,11 @@ export class LevelService {
 
 		const healthMultiplier = 1 + math.floor(minutes) * GameConfig.HealthScaling;
 
+		// The bonus applies only while a siege is running, not forever after the first one.
+		const siegeActive = this.siegeCount > 0 && elapsed - this.lastSiegeTime < GameConfig.SiegeDuration;
+
 		let spawnRateMultiplier = 1;
-		if (this.siegeCount > 0) {
+		if (siegeActive) {
 			spawnRateMultiplier += GameConfig.SiegeFirstBonus + (this.siegeCount - 1) * GameConfig.SiegeScaling;
 		}
 
@@ -94,9 +108,15 @@ export class LevelService {
 			spawnRateMultiplier,
 			bossUnlocked: minutes >= unlockMinutes,
 			siegeUnlocked: minutes >= GameConfig.SiegeUnlockMinutes,
+			siegeActive,
 			siegeCount: this.siegeCount,
 			bossCount: this.bossCount,
 		};
+	}
+
+	getSiegeRemaining(): number {
+		if (this.siegeCount === 0) return 0;
+		return math.max(0, GameConfig.SiegeDuration - (this.stopwatch.getElapsed() - this.lastSiegeTime));
 	}
 
 	getSiegeCount(): number {

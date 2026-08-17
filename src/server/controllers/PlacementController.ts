@@ -53,7 +53,12 @@ export class PlacementController {
 		const tower = this.towerService.place(def, plot.id, tostring(player.UserId), position);
 		if (!tower) return false;
 
-		this.economyService.spendMoney(player, def.cost);
+		if (!this.economyService.spendMoney(player, def.cost)) {
+			this.towerService.remove(tower.uid);
+			if (DEBUG) warn(`[PlacementController] Charge failed after placing tower '${towerId}' — rolled back.`);
+			return false;
+		}
+
 		if (DEBUG) print(`[PlacementController] ${player.Name} placed tower '${towerId}'.`);
 		return true;
 	}
@@ -84,7 +89,12 @@ export class PlacementController {
 		const troop = this.troopService.place(def, plot.id, tostring(player.UserId), snapPosition);
 		if (!troop) return false;
 
-		this.economyService.spendMoney(player, def.cost);
+		if (!this.economyService.spendMoney(player, def.cost)) {
+			this.troopService.remove(troop.uid);
+			if (DEBUG) warn(`[PlacementController] Charge failed after placing troop '${troopId}' — rolled back.`);
+			return false;
+		}
+
 		if (DEBUG) print(`[PlacementController] ${player.Name} placed troop '${troopId}'.`);
 		return true;
 	}
@@ -111,8 +121,13 @@ export class PlacementController {
 			return false;
 		}
 
+		// Upgrade first — a failed model swap must not cost the player anything.
+		if (!this.troopService.upgrade(troopUid)) {
+			if (DEBUG) warn(`[PlacementController] Upgrade of troop ${troopUid} failed — no charge applied.`);
+			return false;
+		}
+
 		this.economyService.spendMoney(player, nextUpgrade.cost);
-		this.troopService.upgrade(troopUid);
 
 		if (DEBUG) print(`[PlacementController] ${player.Name} upgraded troop ${troopUid} to level ${nextLevel}.`);
 		return true;

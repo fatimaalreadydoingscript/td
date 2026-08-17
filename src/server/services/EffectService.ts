@@ -45,7 +45,7 @@ export class EffectService {
 				startTime: now,
 			};
 			enemy.effects.slow = slow;
-			this.enemyService.setSpeed(enemyUid, enemy.baseSpeed * SLOW_MULTIPLIER);
+			this.enemyService.applySlow(enemyUid, SLOW_MULTIPLIER);
 			if (DEBUG) print(`[EffectService] Applied slow to ${enemyUid}.`);
 		} else if (effectType === "toxic") {
 			if (enemy.effects.toxic) {
@@ -89,7 +89,7 @@ export class EffectService {
 				const slow = effects.slow;
 				if (now - slow.startTime >= slow.duration) {
 					enemy.effects.slow = undefined;
-					this.enemyService.resetSpeed(uid);
+					this.enemyService.clearSlow(uid);
 				}
 			}
 

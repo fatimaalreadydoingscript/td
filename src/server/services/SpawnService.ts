@@ -32,11 +32,12 @@ export class SpawnService {
 		const state = this.levelService.getState();
 
 		for (const plot of this.plotService.getAllPlots()) {
-			const count = MathUtil.randomInt(GameConfig.BaseSpawnMin, GameConfig.BaseSpawnMax);
+			const baseCount = MathUtil.randomInt(GameConfig.BaseSpawnMin, GameConfig.BaseSpawnMax);
+			const count = math.max(1, math.floor(baseCount * state.spawnRateMultiplier));
 
 			// ── Ring spawner (always active) ──────────────────────────────────
 			for (let i = 0; i < count; i++) {
-				const def = this.pickEnemy(state.bossUnlocked);
+				const def = this.pickEnemy();
 				if (!def) continue;
 				const pos = this.ringSpawnPosition(plot.core.Position);
 				this.enemyService.spawn(def, plot.id, pos, state.healthMultiplier);
@@ -45,7 +46,7 @@ export class SpawnService {
 			// ── Lane spawners (left + right, if placed in Studio) ─────────────
 			for (const laneSpawner of plot.laneSpawners) {
 				for (let i = 0; i < count; i++) {
-					const def = this.pickEnemy(state.bossUnlocked);
+					const def = this.pickEnemy();
 					if (!def) continue;
 					const pos = this.laneSpawnPosition(laneSpawner.Position);
 					this.enemyService.spawn(def, plot.id, pos, state.healthMultiplier);
@@ -77,11 +78,10 @@ export class SpawnService {
 		}
 	}
 
-	private pickEnemy(bossUnlocked: boolean): EnemyDefinition | undefined {
-		return WeightedRandom.pickFiltered(EnemyConfig as EnemyDefinition[], (d) => {
-			if (d.isBoss) return bossUnlocked;
-			return true;
-		});
+	// Bosses are never drawn by the regular spawner — they arrive only through
+	// spawnBoss(), driven by the boss wave timer.
+	private pickEnemy(): EnemyDefinition | undefined {
+		return WeightedRandom.pickFiltered(EnemyConfig, (d) => !d.isBoss);
 	}
 
 	// Spawns on a random point along a 70-stud ring around the core

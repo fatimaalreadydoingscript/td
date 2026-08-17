@@ -13,6 +13,11 @@ function generateUid(): string {
 	return `enemy_${uidCounter}`;
 }
 
+// Slows and boosts stack multiplicatively instead of overwriting each other.
+function recomputeSpeed(enemy: EnemyInstance): void {
+	enemy.speed = enemy.baseSpeed * enemy.slowMultiplier * enemy.boostMultiplier;
+}
+
 export class EnemyService {
 	private enemies = new Map<string, EnemyInstance>();
 	private pool = new Map<string, BasePart[]>();
@@ -45,6 +50,9 @@ export class EnemyService {
 			maxHealth: scaledHealth,
 			speed: def.speed,
 			baseSpeed: def.speed,
+			slowMultiplier: 1,
+			boostMultiplier: 1,
+			boostExpiry: 0,
 			damage: def.damage,
 			attackCooldown: def.attackCooldown,
 			lastAttackTime: 0,
@@ -61,7 +69,7 @@ export class EnemyService {
 		};
 
 		this.enemies.set(instance.uid, instance);
-		this.partToUid.set(part, instance.uid);
+		this.registerParts(part, instance.uid);
 		if (DEBUG) print(`[EnemyService] Spawned '${def.id}' (uid=${instance.uid}) on plot '${plotId}'.`);
 		return instance;
 	}
@@ -72,7 +80,7 @@ export class EnemyService {
 
 		instance.state = "pooled";
 		this.enemies.delete(uid);
-		this.partToUid.delete(instance.part);
+		this.unregisterParts(instance.part);
 		this.returnToPool(instance.definitionId, instance.part);
 		if (DEBUG) print(`[EnemyService] Despawned enemy uid=${uid}.`);
 	}
@@ -83,7 +91,7 @@ export class EnemyService {
 
 		instance.state = "dead";
 		this.enemies.delete(uid);
-		this.partToUid.delete(instance.part);
+		this.unregisterParts(instance.part);
 		this.returnToPool(instance.definitionId, instance.part);
 		if (DEBUG) print(`[EnemyService] Killed enemy uid=${uid}.`);
 		return instance;
@@ -99,6 +107,15 @@ export class EnemyService {
 
 		this.enemies.forEach((enemy) => {
 			if (enemy.state !== "alive") return;
+
+			// Speed boosts are refreshed every frame by whatever applies them
+			// (e.g. bubbles), so they lapse on their own once the source stops.
+			// Checked before the stun early-return so a stun cannot freeze a boost in place.
+			if (enemy.boostMultiplier !== 1 && now >= enemy.boostExpiry) {
+				enemy.boostMultiplier = 1;
+				recomputeSpeed(enemy);
+			}
+
 			if (enemy.isStunned) {
 				if (now < enemy.stunExpiry) return;
 				enemy.isStunned = false;
@@ -149,16 +166,27 @@ export class EnemyService {
 		enemy.stunExpiry = os.clock() + duration;
 	}
 
-	setSpeed(uid: string, speed: number): void {
+	applySlow(uid: string, multiplier: number): void {
 		const enemy = this.enemies.get(uid);
 		if (!enemy) return;
-		enemy.speed = speed;
+		enemy.slowMultiplier = multiplier;
+		recomputeSpeed(enemy);
 	}
 
-	resetSpeed(uid: string): void {
+	clearSlow(uid: string): void {
 		const enemy = this.enemies.get(uid);
 		if (!enemy) return;
-		enemy.speed = enemy.baseSpeed;
+		enemy.slowMultiplier = 1;
+		recomputeSpeed(enemy);
+	}
+
+	// Boosts expire on their own; callers re-apply each frame to sustain them.
+	applyBoost(uid: string, multiplier: number, duration: number): void {
+		const enemy = this.enemies.get(uid);
+		if (!enemy) return;
+		enemy.boostMultiplier = multiplier;
+		enemy.boostExpiry = os.clock() + duration;
+		recomputeSpeed(enemy);
 	}
 
 	getFolder(): Folder {
@@ -183,6 +211,28 @@ export class EnemyService {
 
 	getCount(): number {
 		return this.enemies.size();
+	}
+
+	// Every part of the model is mapped, not just the PrimaryPart — overlap
+	// queries report whichever part actually intersects.
+	private registerParts(primary: BasePart, uid: string): void {
+		this.partToUid.set(primary, uid);
+
+		const model = primary.Parent;
+		if (!model || !model.IsA("Model")) return;
+		for (const desc of model.GetDescendants()) {
+			if (desc.IsA("BasePart")) this.partToUid.set(desc, uid);
+		}
+	}
+
+	private unregisterParts(primary: BasePart): void {
+		this.partToUid.delete(primary);
+
+		const model = primary.Parent;
+		if (!model || !model.IsA("Model")) return;
+		for (const desc of model.GetDescendants()) {
+			if (desc.IsA("BasePart")) this.partToUid.delete(desc);
+		}
 	}
 
 	private acquirePart(def: EnemyDefinition, position: Vector3): BasePart | undefined {

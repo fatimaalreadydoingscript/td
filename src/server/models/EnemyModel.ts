@@ -11,6 +11,9 @@ export interface EnemyInstance {
 	maxHealth: number;
 	speed: number;
 	baseSpeed: number;
+	slowMultiplier: number;
+	boostMultiplier: number;
+	boostExpiry: number;
 	damage: number;
 	attackCooldown: number;
 	lastAttackTime: number;

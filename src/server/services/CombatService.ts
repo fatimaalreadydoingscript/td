@@ -7,6 +7,7 @@ import { EconomyService } from "./EconomyService";
 import { PlotService } from "./PlotService";
 import { MathUtil } from "../utils/MathUtil";
 import { GameConfig } from "../config/GameConfig";
+import { EnemyInstance } from "../models/EnemyModel";
 
 const DEBUG = GameConfig.DEBUG;
 
@@ -17,6 +18,7 @@ export class CombatService {
 	private effectService: EffectService;
 	private economyService: EconomyService;
 	private plotService: PlotService;
+	private enemiesByPlot = new Map<string, EnemyInstance[]>();
 
 	constructor(
 		enemyService: EnemyService,
@@ -35,19 +37,40 @@ export class CombatService {
 	}
 
 	update(dt: number): void {
+		// Built once per frame. Previously every tower and every troop asked
+		// EnemyService for a freshly allocated per-plot array of its own.
+		this.enemiesByPlot = this.buildEnemyIndex();
+
 		this.processTowerAttacks();
 		this.processTroopAttacks();
 		this.processCoreCollisions();
 		this.effectService.update(dt, (uid, dmg) => this.applyDamageToEnemy(uid, dmg));
 	}
 
+	private buildEnemyIndex(): Map<string, EnemyInstance[]> {
+		const index = new Map<string, EnemyInstance[]>();
+
+		this.enemyService.getAllEnemies().forEach((enemy) => {
+			if (enemy.state !== "alive") return;
+
+			let list = index.get(enemy.plotId);
+			if (!list) {
+				list = [];
+				index.set(enemy.plotId, list);
+			}
+			list.push(enemy);
+		});
+
+		return index;
+	}
+
 	private processCoreCollisions(): void {
 		const overlapParams = new OverlapParams();
 		overlapParams.FilterType = Enum.RaycastFilterType.Include;
+		overlapParams.FilterDescendantsInstances = [this.enemyService.getFolder()];
 
 		for (const plot of this.plotService.getAllPlots()) {
 			const core = plot.core;
-			overlapParams.FilterDescendantsInstances = [this.enemyService.getFolder()];
 
 			const touching = Workspace.GetPartsInPart(core, overlapParams);
 			for (const part of touching) {
@@ -110,11 +133,17 @@ export class CombatService {
 	}
 
 	private findNearestEnemy(plotId: string, position: Vector3, range: number): string | undefined {
-		const enemies = this.enemyService.getAliveEnemiesOnPlot(plotId);
+		const enemies = this.enemiesByPlot.get(plotId);
+		if (!enemies) return undefined;
+
 		let nearest: string | undefined;
 		let nearestDistSq = range * range;
 
 		for (const enemy of enemies) {
+			// The index is built once per frame, so entries can die mid-frame
+			// as earlier towers and troops fire.
+			if (enemy.state !== "alive") continue;
+
 			const distSq = MathUtil.distanceSquared(position, enemy.part.Position);
 			if (distSq <= nearestDistSq) {
 				nearestDistSq = distSq;

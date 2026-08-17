@@ -121,7 +121,15 @@ export namespace ModelLoader {
 
 	export function swapTroopModel(oldPart: BasePart, newModelName: string, parent: Instance): BasePart | undefined {
 		const oldModel = oldPart.Parent;
-		const position = oldPart.Position;
+
+		// Recover the ground the old model stood on. Passing its part position
+		// straight to placeOnSurface would lift the replacement a second time,
+		// so each upgrade would raise the troop off the floor.
+		let surfacePos = oldPart.Position;
+		if (oldModel && oldModel.IsA("Model")) {
+			const [boxCF, boxSize] = oldModel.GetBoundingBox();
+			surfacePos = new Vector3(boxCF.Position.X, boxCF.Position.Y - boxSize.Y / 2, boxCF.Position.Z);
+		}
 
 		const newModel = cloneModel(troopAssets, newModelName);
 		if (!newModel) return undefined;
@@ -132,7 +140,8 @@ export namespace ModelLoader {
 			return undefined;
 		}
 
-		placeOnSurface(newModel, position);
+		anchorModel(newModel);
+		placeOnSurface(newModel, surfacePos);
 		newModel.Parent = parent;
 
 		if (oldModel && oldModel.IsA("Model")) {

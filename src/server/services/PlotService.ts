@@ -13,6 +13,10 @@ export interface PlotData {
 
 const DEBUG = GameConfig.DEBUG;
 
+// Vertical slack above/below the placement pad. Without a Y check at all, a
+// client could pass a position hundreds of studs above the plot and pass validation.
+const PLACEMENT_Y_TOLERANCE = 6;
+
 function hideMarker(part: BasePart): void {
 	part.Transparency = 1;
 	part.CanCollide = false;
@@ -120,10 +124,12 @@ export class PlotService {
 		const plot = this.plots.get(plotId);
 		if (!plot) return false;
 
-		const localPos = plot.placementArea.CFrame.PointToObjectSpace(position);
+		const area = plot.placementArea;
+		const localPos = area.CFrame.PointToObjectSpace(position);
 		return (
-			math.abs(localPos.X) <= plot.placementArea.Size.X / 2 &&
-			math.abs(localPos.Z) <= plot.placementArea.Size.Z / 2
+			math.abs(localPos.X) <= area.Size.X / 2 &&
+			math.abs(localPos.Z) <= area.Size.Z / 2 &&
+			math.abs(localPos.Y) <= area.Size.Y / 2 + PLACEMENT_Y_TOLERANCE
 		);
 	}
 }

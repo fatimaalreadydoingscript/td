@@ -9,6 +9,8 @@ const DEBUG = GameConfig.DEBUG;
 const BUBBLE_SPEED = 12;
 const BUBBLE_SPEED_BOOST = 2.0;
 const BUBBLE_RADIUS = 4;
+// Re-applied every frame an enemy is inside the bubble; lapses shortly after it leaves.
+const BUBBLE_BOOST_LINGER = 0.25;
 
 interface BubbleInstance {
 	readonly id: string;
@@ -57,7 +59,7 @@ export class BubbleService {
 			this.enemyService.getAliveEnemiesOnPlot(bubble.plotId).forEach((enemy) => {
 				const dist = MathUtil.distance(enemy.part.Position, bubble.part.Position);
 				if (dist <= BUBBLE_RADIUS) {
-					this.enemyService.setSpeed(enemy.uid, enemy.baseSpeed * BUBBLE_SPEED_BOOST);
+					this.enemyService.applyBoost(enemy.uid, BUBBLE_SPEED_BOOST, BUBBLE_BOOST_LINGER);
 				}
 			});
 		});

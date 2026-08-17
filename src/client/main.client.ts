@@ -51,9 +51,6 @@ function applyGhostAppearance(model: Model): void {
 			desc.CastShadow = false;
 			desc.Anchored = true;
 		}
-		if (desc.IsA("Decal") || desc.IsA("Texture") || desc.IsA("SpecialMesh")) {
-			// keep visuals, just leave as-is
-		}
 	}
 }
 
