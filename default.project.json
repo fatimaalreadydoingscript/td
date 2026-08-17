@@ -2,7 +2,8 @@
 	"name": "roblox-ts-game",
 	"globIgnorePaths": [
 		"**/package.json",
-		"**/tsconfig.json"
+		"**/tsconfig.json",
+		"**/models"
 	],
 	"tree": {
 		"$className": "DataModel",
