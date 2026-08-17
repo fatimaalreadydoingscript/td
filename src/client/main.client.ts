@@ -4,11 +4,23 @@ const player = Players.LocalPlayer;
 const camera = Workspace.CurrentCamera!;
 const mouse = player.GetMouse();
 
-const remotes = ReplicatedStorage.WaitForChild("Remotes");
+const WAIT_SECONDS = 15;
+
+function requireChild(parent: Instance, name: string, hint: string): Instance {
+	const found = parent.WaitForChild(name, WAIT_SECONDS);
+	if (!found) {
+		error(`[Client] '${name}' never appeared under ${parent.GetFullName()} (waited ${WAIT_SECONDS}s). ${hint}`);
+	}
+	return found;
+}
+
+// Remotes are created by InputController, so a missing folder means the server
+// never finished starting — usually because ReplicatedStorage.Assets is absent.
+const remotes = requireChild(ReplicatedStorage, "Remotes", "The server did not start — check the Output for a [ModelLoader] error.");
 const placeTowerRemote = remotes.WaitForChild("PlaceTower") as RemoteFunction;
 const placeTroopRemote = remotes.WaitForChild("PlaceTroop") as RemoteFunction;
 
-const assetsRoot = ReplicatedStorage.WaitForChild("Assets") as Folder;
+const assetsRoot = requireChild(ReplicatedStorage, "Assets", "Create ReplicatedStorage.Assets with Enemies, Towers and Troops folders.") as Folder;
 const towerAssets = assetsRoot.WaitForChild("Towers") as Folder;
 const troopAssets = assetsRoot.WaitForChild("Troops") as Folder;
 

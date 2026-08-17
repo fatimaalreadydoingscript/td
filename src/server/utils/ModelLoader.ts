@@ -1,9 +1,25 @@
 import { ReplicatedStorage } from "@rbxts/services";
 
-const assetsRoot = ReplicatedStorage.WaitForChild("Assets") as Folder;
-const enemyAssets = assetsRoot.WaitForChild("Enemies") as Folder;
-const towerAssets = assetsRoot.WaitForChild("Towers") as Folder;
-const troopAssets = assetsRoot.WaitForChild("Troops") as Folder;
+const ASSET_WAIT_SECONDS = 10;
+
+// An untimed WaitForChild here hangs the whole server silently: this module is
+// imported by Enemy/Tower/TroopService, so the require chain from main.server
+// never reaches GameService.start(). Fail loudly instead.
+function requireFolder(parent: Instance, name: string): Folder {
+	const found = parent.WaitForChild(name, ASSET_WAIT_SECONDS) as Folder | undefined;
+	if (!found) {
+		error(
+			`[ModelLoader] '${name}' was not found under ${parent.GetFullName()} within ${ASSET_WAIT_SECONDS}s. ` +
+				`The game cannot start without it. Expected ReplicatedStorage.Assets with Enemies, Towers and Troops folders inside.`,
+		);
+	}
+	return found;
+}
+
+const assetsRoot = requireFolder(ReplicatedStorage, "Assets");
+const enemyAssets = requireFolder(assetsRoot, "Enemies");
+const towerAssets = requireFolder(assetsRoot, "Towers");
+const troopAssets = requireFolder(assetsRoot, "Troops");
 
 function cloneModel(folder: Folder, modelName: string): Model | undefined {
 	const template = folder.FindFirstChild(modelName, true) as Model | undefined;
@@ -16,11 +32,19 @@ function cloneModel(folder: Folder, modelName: string): Model | undefined {
 
 function getPrimaryPart(model: Model): BasePart | undefined {
 	const primary = model.PrimaryPart;
-	if (!primary) {
-		warn(`[ModelLoader] Model '${model.Name}' has no PrimaryPart set.`);
-		return undefined;
+	if (primary) return primary;
+
+	// Fall back to any BasePart rather than rejecting the model outright — a
+	// forgotten PrimaryPart is the most common reason art fails to place.
+	const fallback = model.FindFirstChildWhichIsA("BasePart", true);
+	if (fallback) {
+		model.PrimaryPart = fallback;
+		warn(`[ModelLoader] Model '${model.Name}' has no PrimaryPart; falling back to '${fallback.Name}'.`);
+		return fallback;
 	}
-	return primary;
+
+	warn(`[ModelLoader] Model '${model.Name}' has no BasePart to use as a PrimaryPart.`);
+	return undefined;
 }
 
 function anchorModel(model: Model): void {
