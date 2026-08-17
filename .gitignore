@@ -2,3 +2,11 @@
 /out
 /include
 *.tsbuildinfo
+
+# Machine-local Claude Code settings (permissions differ per device)
+.claude/settings.local.json
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.log
